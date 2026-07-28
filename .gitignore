@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.data/
+.env*
+*.log
+*.pdf
+UIUX_Brief_Lockbox_OpsCore.md
+PRD_Ticket_Classification_API.md
+Aurm_SWE_Intern_Screening_Assignment (1) (1).pdf
