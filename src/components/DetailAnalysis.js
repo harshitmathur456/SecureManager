@@ -46,6 +46,7 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
   const [agentNotes, setAgentNotes] = useState(ticket?.agent_notes || '');
   const [isSaving, setIsSaving] = useState(false);
 
+  const isResolved = (ticket?.status || '').toLowerCase() === 'resolved' || (ticket?.status || '').toLowerCase() === 'closed';
   const confidencePct = Math.round((ticket?.confidence ?? 0.85) * 100);
   const isLowConfidence = confidencePct < 70 || Boolean(ticket?.requires_human_review);
 
@@ -135,6 +136,23 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
           </div>
         </div>
       </header>
+
+      {/* Resolved Banner — prominent full-width alert when viewing a resolved ticket */}
+      {isResolved && (
+        <div className="px-6 py-3 bg-emerald-900/30 border-b border-emerald-500/30 flex items-center gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <div>
+            <span className="text-sm font-bold text-emerald-300 font-mono">TICKET RESOLVED</span>
+            <span className="text-xs text-emerald-400/70 ml-3">This ticket has been resolved and removed from the active queue. You are viewing it in read-only audit mode.</span>
+          </div>
+          <button
+            onClick={onBack}
+            className="ml-auto px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold transition-all"
+          >
+            ← Back to Queue
+          </button>
+        </div>
+      )}
 
       {/* Main Grid: Left payload + Right AI analysis engine */}
       <div className="flex-1 flex overflow-hidden">
@@ -362,13 +380,13 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
           </div>
 
           {/* Action Command Bar */}
-          <div className="space-y-2 pt-4 border-t border-[rgba(255,255,255,0.08)]">
-            <div className="label-caps text-gray-500 mb-2">OPS ACTION BAR</div>
+          <div className={`space-y-2 pt-4 border-t border-[rgba(255,255,255,0.08)] ${isResolved ? 'opacity-40 pointer-events-none' : ''}`}>
+            <div className="label-caps text-gray-500 mb-2">{isResolved ? 'OPS ACTION BAR (READ-ONLY)' : 'OPS ACTION BAR'}</div>
             
             <button
               onClick={handleApproveRouting}
-              disabled={isSaving}
-              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/20"
+              disabled={isSaving || isResolved}
+              className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Approve AI Routing</span>
@@ -377,7 +395,8 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setIsReclassifying(!isReclassifying)}
-                className="py-2 px-3 bg-[#161c2a] hover:bg-[#1d2538] border border-[rgba(255,255,255,0.1)] text-blue-300 font-semibold rounded text-xs flex items-center justify-center gap-1.5 transition-all"
+                disabled={isResolved}
+                className="py-2 px-3 bg-[#161c2a] hover:bg-[#1d2538] border border-[rgba(255,255,255,0.1)] text-blue-300 font-semibold rounded text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Re-classify</span>
@@ -385,8 +404,8 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
 
               <button
                 onClick={handleEscalate}
-                disabled={isSaving}
-                className="py-2 px-3 bg-red-950/40 hover:bg-red-900/50 border border-red-500/40 text-red-300 font-semibold rounded text-xs flex items-center justify-center gap-1.5 transition-all"
+                disabled={isSaving || isResolved}
+                className="py-2 px-3 bg-red-950/40 hover:bg-red-900/50 border border-red-500/40 text-red-300 font-semibold rounded text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
                 <span>Escalate Admin</span>
@@ -395,10 +414,10 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
 
             <button
               onClick={handleResolve}
-              disabled={isSaving}
-              className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-xs font-semibold transition-all mt-1"
+              disabled={isSaving || isResolved}
+              className="w-full py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded text-xs font-semibold transition-all mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Mark Ticket Resolved
+              {isResolved ? '✓ Already Resolved' : 'Mark Ticket Resolved'}
             </button>
           </div>
         </div>

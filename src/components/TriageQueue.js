@@ -12,7 +12,8 @@ import {
   UserCheck, 
   ArrowUpRight,
   RefreshCw,
-  Plus
+  Plus,
+  Archive
 } from 'lucide-react';
 
 export default function TriageQueue({ 
@@ -29,11 +30,19 @@ export default function TriageQueue({
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showResolved, setShowResolved] = useState(false);
 
-  // Filter tickets for Triage Queue (Strictly active/unresolved only — resolved tickets are completely removed)
+  // Count of non-resolved tickets (always computed regardless of filter state)
+  const activeTicketCount = tickets.filter(t => {
+    const status = (t.status || '').toLowerCase().trim();
+    return status !== 'resolved' && status !== 'closed';
+  }).length;
+
+  // Filter tickets for Triage Queue
   const filteredTickets = tickets.filter(t => {
     const status = (t.status || '').toLowerCase().trim();
-    if (status === 'resolved' || status === 'closed') return false;
+    // Unless "Show Resolved" is toggled ON, hide resolved/closed tickets
+    if (!showResolved && (status === 'resolved' || status === 'closed')) return false;
     if (filterNeedsReview && !t.requires_human_review) return false;
     if (priorityFilter !== 'all' && (t.priority || '').toLowerCase() !== priorityFilter) return false;
     if (categoryFilter !== 'all' && (t.category || '').toLowerCase() !== categoryFilter) return false;
@@ -93,7 +102,7 @@ export default function TriageQueue({
           <h1 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
             TICKETS QUEUE
             <span className="text-xs font-mono font-normal text-gray-400 px-2 py-0.5 bg-[#0f131d] rounded border border-[rgba(255,255,255,0.08)]">
-              {filteredTickets.length} ACTIVE
+              {showResolved ? `${filteredTickets.length} TOTAL` : `${activeTicketCount} ACTIVE`}
             </span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">Real-time ticket classification and auto-routing engine</p>
@@ -166,6 +175,19 @@ export default function TriageQueue({
                   <option value="facility_request">Facility Request</option>
                   <option value="feedback_other">Feedback & Other</option>
                 </select>
+
+                {/* Show Resolved Toggle */}
+                <button
+                  onClick={() => setShowResolved(!showResolved)}
+                  className={`px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center gap-2 border ${
+                    showResolved
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-900/30'
+                      : 'bg-[#161c2a] text-gray-400 border-[rgba(255,255,255,0.1)] hover:text-white'
+                  }`}
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>{showResolved ? 'SHOWING RESOLVED' : 'SHOW RESOLVED'}</span>
+                </button>
               </div>
 
               {/* Search Bar */}
@@ -195,7 +217,7 @@ export default function TriageQueue({
                 const priorityStyle = getPriorityStyle(t.priority);
                 const isSelected = selectedTicket?.id === t.id;
                 const isUrgent = (t.priority || '').toLowerCase() === 'urgent';
-                const isResolved = (t.status || '').toLowerCase() === 'resolved';
+                const isResolved = (t.status || '').toLowerCase() === 'resolved' || (t.status || '').toLowerCase() === 'closed';
 
                 return (
                   <div
@@ -206,7 +228,7 @@ export default function TriageQueue({
                     }}
                     className={`group relative bg-[#161c2a] hover:bg-[#1d2538] p-4 rounded-r border border-[rgba(255,255,255,0.08)] cursor-pointer transition-all duration-150 ${priorityStyle.border} ${
                       isUrgent ? 'scanline-urgent' : ''
-                    } ${isSelected ? 'ring-1 ring-blue-500 bg-[#1d2538]' : ''}`}
+                    } ${isSelected ? 'ring-1 ring-blue-500 bg-[#1d2538]' : ''} ${isResolved ? 'opacity-50' : ''}`}
                   >
                     {/* Top Row Badges & Metadata */}
                     <div className="flex items-center justify-between mb-2">
@@ -218,6 +240,12 @@ export default function TriageQueue({
                           {formatCategory(t.category)}
                         </span>
                         {getConfidenceBadge(t.confidence, t.requires_human_review)}
+                        {isResolved && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RESOLVED
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-2 text-[11px] font-mono text-gray-400">
