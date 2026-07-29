@@ -24,40 +24,20 @@ export default function TriageQueue({
   onOpenTestModal, 
   telemetry, 
   onRefresh,
-  onUpdateTicket
+  onUpdateTicket,
+  // Lifted props
+  filterNeedsReview,
+  setFilterNeedsReview,
+  priorityFilter,
+  setPriorityFilter,
+  categoryFilter,
+  setCategoryFilter,
+  searchQuery,
+  setSearchQuery,
+  showResolved,
+  setShowResolved,
+  filteredTickets
 }) {
-  const [filterNeedsReview, setFilterNeedsReview] = useState(true);
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showResolved, setShowResolved] = useState(false);
-
-  // Count of non-resolved tickets (always computed regardless of filter state)
-  const activeTicketCount = tickets.filter(t => {
-    const status = (t.status || '').toLowerCase().trim();
-    return status !== 'resolved' && status !== 'closed';
-  }).length;
-
-  // Filter tickets for Triage Queue
-  const filteredTickets = tickets.filter(t => {
-    const status = (t.status || '').toLowerCase().trim();
-    // Unless "Show Resolved" is toggled ON, hide resolved/closed tickets
-    if (!showResolved && (status === 'resolved' || status === 'closed')) return false;
-    if (filterNeedsReview && !t.requires_human_review) return false;
-    if (priorityFilter !== 'all' && (t.priority || '').toLowerCase() !== priorityFilter) return false;
-    if (categoryFilter !== 'all' && (t.category || '').toLowerCase() !== categoryFilter) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      return (
-        (t.title || '').toLowerCase().includes(q) ||
-        (t.body || '').toLowerCase().includes(q) ||
-        (t.id || '').toLowerCase().includes(q) ||
-        (t.email_id || '').toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
   const getPriorityStyle = (priority) => {
     switch ((priority || '').toLowerCase()) {
       case 'urgent':
@@ -102,7 +82,7 @@ export default function TriageQueue({
           <h1 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
             TICKETS QUEUE
             <span className="text-xs font-mono font-normal text-gray-400 px-2 py-0.5 bg-[#0f131d] rounded border border-[rgba(255,255,255,0.08)]">
-              {showResolved ? `${filteredTickets.length} TOTAL` : `${activeTicketCount} ACTIVE`}
+              {showResolved ? `${filteredTickets.length} TOTAL` : `${filteredTickets.length} ACTIVE`}
             </span>
           </h1>
           <p className="text-xs text-gray-400 mt-0.5">Real-time ticket classification and auto-routing engine</p>

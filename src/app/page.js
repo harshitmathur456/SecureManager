@@ -53,12 +53,14 @@ export default function Home() {
 
   const handleUpdateTicket = async (id, updates) => {
     try {
+      console.log(`[DEBUG] Updating ticket ${id} with payload:`, updates);
       const res = await fetch(`/api/tickets/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
       const updated = await res.json();
+      console.log(`[DEBUG] API Response for ticket ${id}:`, updated);
       setTickets(prev => prev.map(t => t.id === id ? updated : t));
       if (updates.status === 'resolved') {
         setSelectedTicket(null);
@@ -86,6 +88,13 @@ export default function Home() {
     }
   };
 
+  // Shared filter states for Triage Queue
+  const [filterNeedsReview, setFilterNeedsReview] = useState(true);
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showResolved, setShowResolved] = useState(false);
+
   // Render Login Page if not authenticated
   if (!isLoggedIn) {
     return (
@@ -98,7 +107,26 @@ export default function Home() {
     );
   }
 
-  const pendingHumanReviewCount = tickets.filter(t => t.status !== 'resolved' && t.requires_human_review).length;
+  // Filter logic shared between components
+  const filteredTickets = tickets.filter(t => {
+    const status = (t.status || '').toLowerCase().trim();
+    if (!showResolved && (status === 'resolved' || status === 'closed')) return false;
+    if (filterNeedsReview && !t.requires_human_review) return false;
+    if (priorityFilter !== 'all' && (t.priority || '').toLowerCase() !== priorityFilter) return false;
+    if (categoryFilter !== 'all' && (t.category || '').toLowerCase() !== categoryFilter) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.body || '').toLowerCase().includes(q) ||
+        (t.id || '').toLowerCase().includes(q) ||
+        (t.email_id || '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const displayCount = filteredTickets.length;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0f131d]">
@@ -107,7 +135,7 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenTestModal={() => setIsTestModalOpen(true)}
-        pendingHumanReviewCount={pendingHumanReviewCount}
+        pendingHumanReviewCount={displayCount}
         user={user}
         onLogout={() => setIsLoggedIn(false)}
       />
@@ -124,6 +152,18 @@ export default function Home() {
             telemetry={telemetry}
             onRefresh={fetchData}
             onUpdateTicket={handleUpdateTicket}
+            // Lifted filter props
+            filterNeedsReview={filterNeedsReview}
+            setFilterNeedsReview={setFilterNeedsReview}
+            priorityFilter={priorityFilter}
+            setPriorityFilter={setPriorityFilter}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            showResolved={showResolved}
+            setShowResolved={setShowResolved}
+            filteredTickets={filteredTickets}
           />
         )}
 

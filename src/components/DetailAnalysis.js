@@ -70,7 +70,7 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
     setIsSaving(true);
     await onUpdateTicket(ticket.id, {
       requires_human_review: false,
-      status: 'in_progress',
+      status: 'resolved',
       agent_notes: 'Ops agent approved AI routing decision.'
     });
     setIsSaving(false);
