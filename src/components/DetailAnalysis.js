@@ -41,13 +41,13 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
   }
 
   const [isReclassifying, setIsReclassifying] = useState(false);
-  const [newCategory, setNewCategory] = useState(ticket.category);
-  const [newPriority, setNewPriority] = useState(ticket.priority);
-  const [agentNotes, setAgentNotes] = useState(ticket.agent_notes || '');
+  const [newCategory, setNewCategory] = useState(ticket?.category || 'feedback_other');
+  const [newPriority, setNewPriority] = useState(ticket?.priority || 'low');
+  const [agentNotes, setAgentNotes] = useState(ticket?.agent_notes || '');
   const [isSaving, setIsSaving] = useState(false);
 
-  const confidencePct = Math.round(ticket.confidence * 100);
-  const isLowConfidence = confidencePct < 70 || ticket.requires_human_review;
+  const confidencePct = Math.round((ticket?.confidence ?? 0.85) * 100);
+  const isLowConfidence = confidencePct < 70 || Boolean(ticket?.requires_human_review);
 
   const handleSaveReclassification = async () => {
     setIsSaving(true);
@@ -260,15 +260,15 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 font-mono">CATEGORY:</span>
                   <span className="font-bold text-blue-300 font-mono px-2 py-0.5 bg-[#0f131d] rounded border border-[rgba(255,255,255,0.1)]">
-                    {ticket.category.toUpperCase()}
+                    {(ticket?.category || 'feedback_other').replace(/_/g, ' ').toUpperCase()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 font-mono">PRIORITY TIER:</span>
                   <span className={`font-bold font-mono px-2 py-0.5 rounded border uppercase ${
-                    ticket.priority === 'urgent' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    ticket?.priority === 'urgent' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
                   }`}>
-                    {ticket.priority}
+                    {(ticket?.priority || 'low').toUpperCase()}
                   </span>
                 </div>
               </div>

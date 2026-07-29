@@ -48,7 +48,7 @@ export default function TriageQueue({
   });
 
   const getPriorityStyle = (priority) => {
-    switch (priority.toLowerCase()) {
+    switch ((priority || '').toLowerCase()) {
       case 'urgent':
         return { border: 'border-l-4 border-l-red-500', bg: 'bg-red-500/10 text-red-400 border-red-500/30', label: 'URGENT' };
       case 'high':
@@ -61,6 +61,7 @@ export default function TriageQueue({
   };
 
   const formatCategory = (cat) => {
+    if (!cat) return 'UNKNOWN';
     return cat.replace(/_/g, ' ').toUpperCase();
   };
 

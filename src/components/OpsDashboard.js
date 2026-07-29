@@ -130,7 +130,7 @@ export default function OpsDashboard({ stats, tickets }) {
                   <div key={t.id} className="p-3 bg-red-950/20 border border-red-500/30 rounded text-red-300 space-y-1">
                     <div className="flex justify-between font-bold">
                       <span>{t.id}</span>
-                      <span className="text-red-400">{t.category.toUpperCase()}</span>
+                      <span className="text-red-400">{(t.category || 'feedback_other').toUpperCase()}</span>
                     </div>
                     <p className="text-[11px] text-gray-300 font-sans line-clamp-1">{t.title}</p>
                     <div className="text-[10px] text-gray-400 flex justify-between pt-1">
