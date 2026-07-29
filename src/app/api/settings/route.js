@@ -15,7 +15,7 @@ export async function GET() {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const updated = updateSettings(body);
+    const updated = await updateSettings(body);
     return NextResponse.json(updated);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });

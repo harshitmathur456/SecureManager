@@ -58,10 +58,10 @@ export async function POST(req) {
       extracted_asset_id: classification.extracted_asset_id || "N/A"
     };
 
-    saveTicket(newTicketRecord);
+    await saveTicket(newTicketRecord);
 
     // Log telemetry
-    logTelemetry({
+    await logTelemetry({
       ticket_id: ticketId,
       event_type: classification.requires_human_review ? "FLAGGED_HUMAN_REVIEW" : "AUTO_ROUTED",
       message: classification.requires_human_review

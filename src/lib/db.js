@@ -3,6 +3,37 @@ import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
 const STORE_PATH = path.join(DATA_DIR, 'lockbox_store.json');
+const STORE_TMP_PATH = STORE_PATH + '.tmp';
+
+// ---------------------------------------------------------------------------
+// In-process async mutex via promise chaining.
+//
+// Every mutating function (saveTicket, updateTicketStatus, logTelemetry,
+// updateSettings) wraps its full read-modify-write cycle inside withLock().
+// This guarantees that even though Node.js is single-threaded, interleaved
+// async operations (e.g. two concurrent API requests hitting PATCH and POST
+// at the same time) cannot read stale data from the JSON file and silently
+// overwrite each other's changes.
+//
+// NOTE: This is a lightweight fix appropriate for a single-process local demo.
+// A production system would use a real database (Postgres, Supabase, or SQLite
+// with WAL mode) with proper transactional guarantees instead of a locked JSON
+// file.  See README.md § "What We Would Improve" for details.
+// ---------------------------------------------------------------------------
+let _lockChain = Promise.resolve();
+
+/**
+ * Serialize access to the JSON store file.
+ * `fn` receives no arguments and should perform the entire read-modify-write
+ * cycle.  Its return value is forwarded to the caller.
+ */
+function withLock(fn) {
+  const next = _lockChain.then(fn, fn);   // run fn after previous settles
+  // Swallow rejections on the chain itself so one failure doesn't block
+  // all subsequent operations — the caller still gets the rejection.
+  _lockChain = next.catch(() => {});
+  return next;
+}
 
 const INITIAL_SEED_TICKETS = [
   {
@@ -146,6 +177,10 @@ const INITIAL_TELEMETRY = [
   { id: 4, ticket_id: "TCK-9404", event_type: "TICKET_RESOLVED", message: "Agent approved billing refund suggestion.", level: "success", created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString() }
 ];
 
+// ---------------------------------------------------------------------------
+// File I/O helpers
+// ---------------------------------------------------------------------------
+
 function ensureStoreExists() {
   if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -164,7 +199,7 @@ function ensureStoreExists() {
         low_sla_minutes: 1440
       }
     };
-    fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2), 'utf-8');
+    writeStoreAtomic(store);
   }
 }
 
@@ -180,12 +215,29 @@ export function readStore() {
   }
 }
 
-export function writeStore(data) {
+/**
+ * Atomic file write: serialize JSON to a temporary file, then rename it over
+ * the real store file.  fs.renameSync is atomic on the same filesystem on both
+ * POSIX and NTFS, so a crash mid-write can never leave a half-written JSON
+ * file on disk.
+ */
+function writeStoreAtomic(data) {
   ensureStoreExists();
-  fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  const json = JSON.stringify(data, null, 2);
+  fs.writeFileSync(STORE_TMP_PATH, json, 'utf-8');
+  fs.renameSync(STORE_TMP_PATH, STORE_PATH);
 }
 
-// Database helper functions
+/** @deprecated Use writeStoreAtomic inside withLock() instead. Kept for any
+ *  external callers that import writeStore directly. */
+export function writeStore(data) {
+  writeStoreAtomic(data);
+}
+
+// ---------------------------------------------------------------------------
+// Read-only helpers (no lock needed — reads are idempotent)
+// ---------------------------------------------------------------------------
+
 export function getTickets(filters = {}) {
   const store = readStore();
   let result = [...store.tickets];
@@ -227,61 +279,6 @@ export function getTicketById(id) {
   return store.tickets.find(t => t.id === id || t.email_id === id) || null;
 }
 
-export function saveTicket(ticket) {
-  const store = readStore();
-  const index = store.tickets.findIndex(t => t.id === ticket.id || t.email_id === ticket.email_id);
-  
-  if (index >= 0) {
-    store.tickets[index] = { ...store.tickets[index], ...ticket };
-  } else {
-    store.tickets.unshift(ticket);
-  }
-  
-  writeStore(store);
-  return ticket;
-}
-
-export function updateTicketStatus(id, updates) {
-  const store = readStore();
-  const ticket = store.tickets.find(t => t.id === id);
-  if (!ticket) return null;
-
-  Object.assign(ticket, updates);
-  if (updates.status === 'resolved' && !ticket.resolved_at) {
-    ticket.resolved_at = new Date().toISOString();
-  }
-
-  writeStore(store);
-  
-  // Log telemetry event
-  logTelemetry({
-    ticket_id: id,
-    event_type: updates.corrected_category ? "AGENT_RECLASSIFICATION" : "TICKET_UPDATE",
-    message: updates.corrected_category
-      ? `Agent reclassified ticket ${id} to category '${updates.corrected_category}' (Priority: '${updates.corrected_priority || ticket.priority}')`
-      : `Ticket ${id} status updated to '${updates.status}'`,
-    level: "info"
-  });
-
-  return ticket;
-}
-
-export function logTelemetry({ ticket_id, event_type, message, level = "info" }) {
-  const store = readStore();
-  const log = {
-    id: Date.now(),
-    ticket_id,
-    event_type,
-    message,
-    level,
-    created_at: new Date().toISOString()
-  };
-  store.telemetry.unshift(log);
-  if (store.telemetry.length > 50) store.telemetry.pop();
-  writeStore(store);
-  return log;
-}
-
 export function getTelemetry() {
   const store = readStore();
   return store.telemetry || [];
@@ -292,18 +289,102 @@ export function getSettings() {
   return store.settings;
 }
 
-export function updateSettings(newSettings) {
-  const store = readStore();
-  store.settings = { ...store.settings, ...newSettings };
-  writeStore(store);
-  logTelemetry({
-    ticket_id: "SYSTEM",
-    event_type: "SETTINGS_UPDATE",
-    message: `System confidence threshold updated to ${(store.settings.confidence_threshold * 100).toFixed(0)}%.`,
-    level: "warning"
+// ---------------------------------------------------------------------------
+// Mutating helpers — every read-modify-write cycle runs inside withLock()
+// so concurrent API requests can never interleave and silently overwrite
+// each other's changes.
+// ---------------------------------------------------------------------------
+
+export function saveTicket(ticket) {
+  return withLock(() => {
+    const store = readStore();
+    const index = store.tickets.findIndex(t => t.id === ticket.id || t.email_id === ticket.email_id);
+
+    if (index >= 0) {
+      store.tickets[index] = { ...store.tickets[index], ...ticket };
+    } else {
+      store.tickets.unshift(ticket);
+    }
+
+    writeStoreAtomic(store);
+    return ticket;
   });
-  return store.settings;
 }
+
+export function updateTicketStatus(id, updates) {
+  return withLock(() => {
+    const store = readStore();
+    const ticket = store.tickets.find(t => t.id === id);
+    if (!ticket) return null;
+
+    Object.assign(ticket, updates);
+    if (updates.status === 'resolved' && !ticket.resolved_at) {
+      ticket.resolved_at = new Date().toISOString();
+    }
+
+    // Inline telemetry log inside the same atomic write so we don't need a
+    // second read-modify-write cycle (which would deadlock the mutex).
+    const telemetryLog = {
+      id: Date.now(),
+      ticket_id: id,
+      event_type: updates.corrected_category ? "AGENT_RECLASSIFICATION" : "TICKET_UPDATE",
+      message: updates.corrected_category
+        ? `Agent reclassified ticket ${id} to category '${updates.corrected_category}' (Priority: '${updates.corrected_priority || ticket.priority}')`
+        : `Ticket ${id} status updated to '${updates.status}'`,
+      level: "info",
+      created_at: new Date().toISOString()
+    };
+    store.telemetry.unshift(telemetryLog);
+    if (store.telemetry.length > 50) store.telemetry.pop();
+
+    writeStoreAtomic(store);
+    return ticket;
+  });
+}
+
+export function logTelemetry({ ticket_id, event_type, message, level = "info" }) {
+  return withLock(() => {
+    const store = readStore();
+    const log = {
+      id: Date.now(),
+      ticket_id,
+      event_type,
+      message,
+      level,
+      created_at: new Date().toISOString()
+    };
+    store.telemetry.unshift(log);
+    if (store.telemetry.length > 50) store.telemetry.pop();
+    writeStoreAtomic(store);
+    return log;
+  });
+}
+
+export function updateSettings(newSettings) {
+  return withLock(() => {
+    const store = readStore();
+    store.settings = { ...store.settings, ...newSettings };
+
+    // Inline telemetry log in the same atomic write (avoids re-entrant lock).
+    const telemetryLog = {
+      id: Date.now(),
+      ticket_id: "SYSTEM",
+      event_type: "SETTINGS_UPDATE",
+      message: `System confidence threshold updated to ${(store.settings.confidence_threshold * 100).toFixed(0)}%.`,
+      level: "warning",
+      created_at: new Date().toISOString()
+    };
+    store.telemetry.unshift(telemetryLog);
+    if (store.telemetry.length > 50) store.telemetry.pop();
+
+    writeStoreAtomic(store);
+    return store.settings;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// SLA helper (read-only, no lock needed)
+// ---------------------------------------------------------------------------
 
 export function calculateSlaDeadline(priority, createdAtDate = new Date()) {
   const store = readStore();

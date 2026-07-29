@@ -26,7 +26,7 @@ export async function PATCH(req, { params }) {
     const { id } = params;
     const body = await req.json();
 
-    const updated = updateTicketStatus(id, body);
+    const updated = await updateTicketStatus(id, body);
     if (!updated) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }

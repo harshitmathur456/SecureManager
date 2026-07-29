@@ -120,7 +120,7 @@ Content-Type: application/json
    - Automatically compile agent corrections (`corrected_category`, `corrected_priority`) into few-shot prompt exemplars so the LLM self-improves with daily Ops usage.
 3. **Automated Escalation Timers**:
    - Webhook timers that trigger PagerDuty alerts if an `urgent` ticket remains unassigned 5 minutes before SLA deadline breach.
-4. **Concurrent Write Safety**:
-   - The current file-based JSON store has no write-locking and is not safe under concurrent requests (e.g. simultaneous POST calls may cause partial writes or data loss). A proper database (SQLite with WAL mode, PostgreSQL, etc.) with atomic transactions is required before production use.
+4. **Production-Grade Database & Transaction Guarantees**:
+   - While we implemented an async mutex lock/queue (`withLock`) and atomic temporary-file writes (`fs.renameSync`) in `db.js` to eliminate race conditions and partial file corruption in this single-process local demo, a production version should migrate to a real database (such as Postgres/Supabase or SQLite with WAL mode) with proper transactional guarantees (`SERIALIZABLE` isolation or row-level locking).
 
 
