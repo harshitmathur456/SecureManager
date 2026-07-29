@@ -17,7 +17,7 @@ export async function POST(req) {
       );
     }
 
-    const settings = getSettings();
+    const settings = await getSettings();
     const threshold = settings.confidence_threshold || 0.70;
 
     // Run AI / Hybrid classification engine
@@ -29,7 +29,7 @@ export async function POST(req) {
     });
 
     const createdAt = new Date().toISOString();
-    const slaDeadline = calculateSlaDeadline(classification.priority, new Date());
+    const slaDeadline = await calculateSlaDeadline(classification.priority, new Date());
 
     // Collision-safe ticket ID derived from a UUID
     const ticketId = `TCK-${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;

@@ -4,10 +4,11 @@ import { getTicketById, updateTicketStatus } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(req, { params }) {
+export async function GET(req, context) {
   try {
-    const { id } = params;
-    const ticket = getTicketById(id);
+    const resolvedParams = await context.params;
+    const id = resolvedParams?.id;
+    const ticket = await getTicketById(id);
     if (!ticket) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
@@ -21,9 +22,10 @@ export async function GET(req, { params }) {
   }
 }
 
-export async function PATCH(req, { params }) {
+export async function PATCH(req, context) {
   try {
-    const { id } = params;
+    const resolvedParams = await context.params;
+    const id = resolvedParams?.id;
     const body = await req.json();
 
     const updated = await updateTicketStatus(id, body);

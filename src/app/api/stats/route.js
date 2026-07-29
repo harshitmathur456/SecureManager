@@ -5,9 +5,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const tickets = getTickets();
-    const telemetry = getTelemetry();
-    const settings = getSettings();
+    const [tickets, telemetry, settings] = await Promise.all([
+      getTickets(),
+      getTelemetry(),
+      getSettings()
+    ]);
 
     const totalTriaged = tickets.length;
     const pendingCritical = tickets.filter(t => t.priority === 'urgent' && t.status !== 'resolved').length;

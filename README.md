@@ -99,15 +99,30 @@ Content-Type: application/json
    ```
    Get your free API key at [https://console.groq.com/keys](https://console.groq.com/keys).
 
-3. **Start Local Development Server**:
+3. **Supabase Database Setup**:
+   - Create a new project in your [Supabase Dashboard](https://supabase.com).
+   - Locate the **Project URL** and **API Anon Key** under **Project Settings > API**.
+   - Open your local `.env.local` file and configure these variables:
+     ```env
+     NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+     ```
+   - Go to the **SQL Editor** in the Supabase Dashboard:
+     1. Open and run the contents of [supabase/schema.sql](file:///d:/Aurm/supabase/schema.sql) to create the `tickets`, `telemetry`, and `settings` tables.
+     2. Open and run the contents of [supabase/seed.sql](file:///d:/Aurm/supabase/seed.sql) to populate the database with the initial demo tickets and logging metrics.
+   
+   > [!NOTE]
+   > This Supabase integration replaces the previous local file-based JSON store, resolving concurrency issues and ensuring reliable multi-client state persistence.
+
+4. **Start Local Development Server**:
    ```bash
    npm run dev
    ```
 
-4. **Access the Ops_Core Console**:
+5. **Access the Ops_Core Console**:
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-5. **Test the API**:
+6. **Test the API**:
    - Click the **"Ingest Email"** button in the sidebar or Ticket Queue header to send live queries to `POST /api/classify` with instant JSON response visualization and automatic queue insertion!
 
 ---

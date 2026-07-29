@@ -15,7 +15,7 @@ export async function GET(req) {
       search: searchParams.get('search'),
     };
 
-    const tickets = getTickets(filters);
+    const tickets = await getTickets(filters);
     return NextResponse.json(
       { tickets, count: tickets.length },
       {

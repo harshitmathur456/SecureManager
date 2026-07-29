@@ -108,7 +108,8 @@ export default function Home() {
   }
 
   // Filter logic shared between components
-  const filteredTickets = tickets.filter(t => {
+  const safeTickets = Array.isArray(tickets) ? tickets : [];
+  const filteredTickets = safeTickets.filter(t => {
     const status = (t.status || '').toLowerCase().trim();
     if (!showResolved && (status === 'resolved' || status === 'closed')) return false;
     if (filterNeedsReview && !t.requires_human_review) return false;
