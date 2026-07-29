@@ -26,16 +26,14 @@ export default function TriageQueue({
   onUpdateTicket
 }) {
   const [filterNeedsReview, setFilterNeedsReview] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('active');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter tickets
+  // Filter tickets for Triage Queue (Strictly active/unresolved only — resolved tickets are completely removed)
   const filteredTickets = tickets.filter(t => {
     const status = (t.status || '').toLowerCase().trim();
-    if (statusFilter === 'active' && (status === 'resolved' || status === 'closed')) return false;
-    if (statusFilter === 'resolved' && status !== 'resolved' && status !== 'closed') return false;
+    if (status === 'resolved' || status === 'closed') return false;
     if (filterNeedsReview && !t.requires_human_review) return false;
     if (priorityFilter !== 'all' && (t.priority || '').toLowerCase() !== priorityFilter) return false;
     if (categoryFilter !== 'all' && (t.category || '').toLowerCase() !== categoryFilter) return false;
@@ -140,17 +138,6 @@ export default function TriageQueue({
                   <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                   <span>NEEDS HUMAN REVIEW</span>
                 </button>
-
-                {/* Status Selector */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-[#161c2a] text-gray-300 text-xs border border-[rgba(255,255,255,0.1)] rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-500 font-mono"
-                >
-                  <option value="active">Active (Unresolved)</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="all">All Statuses</option>
-                </select>
 
                 {/* Priority Selector */}
                 <select
