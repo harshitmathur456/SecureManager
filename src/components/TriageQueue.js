@@ -22,26 +22,30 @@ export default function TriageQueue({
   setActiveTab, 
   onOpenTestModal, 
   telemetry, 
-  onRefresh 
+  onRefresh,
+  onUpdateTicket
 }) {
   const [filterNeedsReview, setFilterNeedsReview] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('active');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter tickets
   const filteredTickets = tickets.filter(t => {
-    if (t.status === 'resolved') return false;
+    const status = (t.status || '').toLowerCase().trim();
+    if (statusFilter === 'active' && (status === 'resolved' || status === 'closed')) return false;
+    if (statusFilter === 'resolved' && status !== 'resolved' && status !== 'closed') return false;
     if (filterNeedsReview && !t.requires_human_review) return false;
-    if (priorityFilter !== 'all' && t.priority.toLowerCase() !== priorityFilter) return false;
-    if (categoryFilter !== 'all' && t.category.toLowerCase() !== categoryFilter) return false;
+    if (priorityFilter !== 'all' && (t.priority || '').toLowerCase() !== priorityFilter) return false;
+    if (categoryFilter !== 'all' && (t.category || '').toLowerCase() !== categoryFilter) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return (
-        t.title.toLowerCase().includes(q) ||
-        t.body.toLowerCase().includes(q) ||
-        t.id.toLowerCase().includes(q) ||
-        t.email_id.toLowerCase().includes(q)
+        (t.title || '').toLowerCase().includes(q) ||
+        (t.body || '').toLowerCase().includes(q) ||
+        (t.id || '').toLowerCase().includes(q) ||
+        (t.email_id || '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -137,6 +141,17 @@ export default function TriageQueue({
                   <span>NEEDS HUMAN REVIEW</span>
                 </button>
 
+                {/* Status Selector */}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-[#161c2a] text-gray-300 text-xs border border-[rgba(255,255,255,0.1)] rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-500 font-mono"
+                >
+                  <option value="active">Active (Unresolved)</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="all">All Statuses</option>
+                </select>
+
                 {/* Priority Selector */}
                 <select
                   value={priorityFilter}
@@ -185,14 +200,15 @@ export default function TriageQueue({
             {filteredTickets.length === 0 ? (
               <div className="p-12 text-center border border-dashed border-[rgba(255,255,255,0.1)] rounded-lg bg-[#0a0e18]">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-60" />
-                <h3 className="text-sm font-semibold text-gray-300">No Tickets Pending Review</h3>
-                <p className="text-xs text-gray-500 mt-1">All incoming queries have been classified or auto-routed according to system rules.</p>
+                <h3 className="text-sm font-semibold text-gray-300">No Tickets Found</h3>
+                <p className="text-xs text-gray-500 mt-1">No tickets match the selected filters or all active queries have been resolved.</p>
               </div>
             ) : (
               filteredTickets.map((t) => {
                 const priorityStyle = getPriorityStyle(t.priority);
                 const isSelected = selectedTicket?.id === t.id;
-                const isUrgent = t.priority.toLowerCase() === 'urgent';
+                const isUrgent = (t.priority || '').toLowerCase() === 'urgent';
+                const isResolved = (t.status || '').toLowerCase() === 'resolved';
 
                 return (
                   <div
@@ -243,7 +259,20 @@ export default function TriageQueue({
                         <span>Email ID: <span className="text-gray-300">{t.email_id}</span></span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2">
+                        {!isResolved && onUpdateTicket && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateTicket(t.id, { status: 'resolved', requires_human_review: false });
+                            }}
+                            className="px-2 py-0.5 bg-emerald-950/50 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 rounded text-[10px] font-mono font-semibold flex items-center gap-1 transition-all"
+                            title="Mark ticket resolved"
+                          >
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Mark Resolved</span>
+                          </button>
+                        )}
                         <span className="text-[11px] font-mono text-blue-400 flex items-center gap-1 group-hover:underline">
                           Analyze & Route <ChevronRight className="w-3.5 h-3.5" />
                         </span>

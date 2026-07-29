@@ -122,6 +122,7 @@ export default function Home() {
             onOpenTestModal={() => setIsTestModalOpen(true)}
             telemetry={telemetry}
             onRefresh={fetchData}
+            onUpdateTicket={handleUpdateTicket}
           />
         )}
 
