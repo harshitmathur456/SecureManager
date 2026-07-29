@@ -58,7 +58,12 @@ export default function Home() {
         body: JSON.stringify(updates)
       });
       const updated = await res.json();
-      setSelectedTicket(updated);
+      setTickets(prev => prev.map(t => t.id === id ? updated : t));
+      if (updates.status === 'resolved') {
+        setSelectedTicket(null);
+      } else {
+        setSelectedTicket(updated);
+      }
       await fetchData();
     } catch (err) {
       console.error('Failed to update ticket:', err);

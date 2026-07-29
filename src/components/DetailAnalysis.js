@@ -62,6 +62,7 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
     });
     setIsSaving(false);
     setIsReclassifying(false);
+    if (onBack) onBack();
   };
 
   const handleApproveRouting = async () => {
@@ -72,6 +73,7 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
       agent_notes: 'Ops agent approved AI routing decision.'
     });
     setIsSaving(false);
+    if (onBack) onBack();
   };
 
   const handleResolve = async () => {
@@ -81,6 +83,7 @@ export default function DetailAnalysis({ ticket, onBack, onUpdateTicket }) {
       requires_human_review: false
     });
     setIsSaving(false);
+    if (onBack) onBack();
   };
 
   const handleEscalate = async () => {
