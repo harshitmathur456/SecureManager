@@ -246,20 +246,7 @@ export default function TriageQueue({
                         <span>Email ID: <span className="text-gray-300">{t.email_id}</span></span>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {!isResolved && onUpdateTicket && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onUpdateTicket(t.id, { status: 'resolved', requires_human_review: false });
-                            }}
-                            className="px-2 py-0.5 bg-emerald-950/50 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 rounded text-[10px] font-mono font-semibold flex items-center gap-1 transition-all"
-                            title="Mark ticket resolved"
-                          >
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            <span>Mark Resolved</span>
-                          </button>
-                        )}
+                      <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                         <span className="text-[11px] font-mono text-blue-400 flex items-center gap-1 group-hover:underline">
                           Analyze & Route <ChevronRight className="w-3.5 h-3.5" />
                         </span>
