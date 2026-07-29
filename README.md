@@ -6,9 +6,10 @@ An enterprise-grade, hybrid AI-powered **Ticket Classification & Prioritisation 
 
 ## 🌟 Key Features
 
-1. **Hybrid AI Engine (`POST /classify` & `/api/classify`)**:
-   - **Keyword Safety Net Pre-Filter**: Instant regex scanner for critical security/tamper keywords (`stolen`, `chori`, `tamper`, `pry`, `unauthorized`, `locked out`, `passport inside`). Escalates priority to **URGENT** regardless of LLM confidence score.
-   - **Structured Gemini LLM Classifier**: Uses `@google/genai` with strict JSON schema outputs, category taxonomy, reasoning rationale, and fallback rule engine for offline development.
+1. **Hybrid AI Engine (`POST /api/classify`)**:
+   - **Keyword Safety Net Pre-Filter**: Instant scanner for critical security/tamper keywords (`stolen`, `chori`, `tamper`, `pry`, `unauthorized`, `locked out`, `passport inside`). Escalates priority to **URGENT** regardless of LLM confidence score.
+   - **Groq LLM Classifier**: Uses `groq-sdk` with `llama-3.1-8b-instant`, `response_format: json_object`, strict JSON schema outputs, category taxonomy, and reasoning rationale.
+   - **Rule-Based Fallback**: Offline/keyless rule engine runs automatically when `GROQ_API_KEY` is absent or the API call fails — no silent breakage.
    - **Human-in-the-Loop Guardrail**: Any `security_concern` query OR classification confidence `< 0.70` automatically sets `requires_human_review = true`.
 
 2. **Ops_Core Console (4 Industrial Screens)**:
@@ -18,7 +19,7 @@ An enterprise-grade, hybrid AI-powered **Ticket Classification & Prioritisation 
    - **System Settings**: Interactive auto-routing confidence threshold slider (0.50 – 0.95) with live operational impact preview, safety net toggles, and notification matrix.
 
 3. **Persistent Data & SLA Engine**:
-   - SQLite / File-backed persistent storage of every incoming ticket, AI rationale, agent overrides, telemetry logs, and SLA deadlines.
+   - File-backed persistent storage of every incoming ticket, AI rationale, agent overrides, telemetry logs, and SLA deadlines.
    - Automatic `sla_deadline` computation:
      - **Urgent**: +15 minutes
      - **High**: +1 hour
@@ -43,7 +44,7 @@ An enterprise-grade, hybrid AI-powered **Ticket Classification & Prioritisation 
 
 ---
 
-## 📡 API Contract (`POST /classify`)
+## 📡 API Contract (`POST /api/classify`)
 
 ### Request
 ```json
@@ -53,14 +54,17 @@ Content-Type: application/json
 {
   "email_id": "em_849202",
   "title": "Locked out! App code not generating and passport inside",
-  "body": "I am at the locker right now trying to retrieve my passport for an early morning flight. The app says 'Connection Error' when generating OTP code. Please help me unlock it urgent!"
+  "body": "I am at the locker right now trying to retrieve my passport for an early morning flight. The app says 'Connection Error' when generating OTP code. Please help me unlock it urgent!",
+  "society_name": "Oakridge Greens"
 }
 ```
+
+> `society_name` is **optional** — defaults to `"Unknown Society"` if omitted.
 
 ### Response (`201 Created`)
 ```json
 {
-  "ticket_id": "TCK-9402",
+  "ticket_id": "TCK-A1B2C3D4",
   "email_id": "em_849202",
   "category": "locker_access",
   "priority": "urgent",
@@ -86,14 +90,14 @@ Content-Type: application/json
    npm install
    ```
 
-2. **Set Optional Gemini API Key** (optional, fallback rule engine runs automatically if omitted):
+2. **Set Optional Groq API Key** (optional — fallback rule engine runs automatically if omitted):
    ```bash
-   # On Windows PowerShell
-   $env:GEMINI_API_KEY="your_api_key_here"
-   
-   # Or create a .env.local file
-   echo "GEMINI_API_KEY=your_api_key_here" > .env.local
+   # Copy the example env file and fill in your key
+   cp .env.example .env.local
+   # Then edit .env.local and set:
+   # GROQ_API_KEY=your_api_key_here
    ```
+   Get your free API key at [https://console.groq.com/keys](https://console.groq.com/keys).
 
 3. **Start Local Development Server**:
    ```bash
@@ -104,7 +108,7 @@ Content-Type: application/json
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 5. **Test the API**:
-   - Click the **"Test API Classify"** or **"Ingest Email API"** button in the top bar to send live queries to `POST /api/classify` with instant JSON response visualization and automatic queue insertion!
+   - Click the **"Ingest Email"** button in the sidebar or Ticket Queue header to send live queries to `POST /api/classify` with instant JSON response visualization and automatic queue insertion!
 
 ---
 
@@ -116,3 +120,11 @@ Content-Type: application/json
    - Automatically compile agent corrections (`corrected_category`, `corrected_priority`) into few-shot prompt exemplars so the LLM self-improves with daily Ops usage.
 3. **Automated Escalation Timers**:
    - Webhook timers that trigger PagerDuty alerts if an `urgent` ticket remains unassigned 5 minutes before SLA deadline breach.
+4. **Concurrent Write Safety**:
+   - The current file-based JSON store has no write-locking and is not safe under concurrent requests (e.g. simultaneous POST calls may cause partial writes or data loss). A proper database (SQLite with WAL mode, PostgreSQL, etc.) with atomic transactions is required before production use.
+
+---
+
+## 📄 License
+
+[MIT](./LICENSE)

@@ -1,9 +1,19 @@
 node_modules/
 .next/
 .data/
+
+# Environment files — never commit real keys
 .env*
+# Keep the example file tracked (it has no real secrets)
+!.env.example
+
+# Logs
 *.log
+
+# PDFs — typically large binary assets not needed in source control
 *.pdf
-UIUX_Brief_Lockbox_OpsCore.md
-PRD_Ticket_Classification_API.md
-Aurm_SWE_Intern_Screening_Assignment (1) (1).pdf
+
+# Internal design/brief docs — excluded to keep the repo focused on code
+# (UIUX_Brief_*.md, PRD_*.md)
+UIUX_Brief_*.md
+PRD_*.md

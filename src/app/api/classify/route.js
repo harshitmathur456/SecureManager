@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { classifyEmail } from '@/lib/classifier';
 import { saveTicket, calculateSlaDeadline, logTelemetry, getSettings } from '@/lib/db';
+import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { title, body: emailBody, email_id } = body;
+    const { title, body: emailBody, email_id, society_name } = body;
 
     if (!title || !emailBody || !email_id) {
       return NextResponse.json(
@@ -29,7 +30,9 @@ export async function POST(req) {
 
     const createdAt = new Date().toISOString();
     const slaDeadline = calculateSlaDeadline(classification.priority, new Date());
-    const ticketId = `TCK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Collision-safe ticket ID derived from a UUID
+    const ticketId = `TCK-${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
     const newTicketRecord = {
       id: ticketId,
@@ -49,7 +52,8 @@ export async function POST(req) {
       corrected_category: null,
       corrected_priority: null,
       agent_notes: null,
-      society_name: "Oakridge Greens",
+      // Accept society_name from request body; fall back to "Unknown Society"
+      society_name: society_name || "Unknown Society",
       extracted_location: classification.extracted_location || "Main Locker Bank",
       extracted_asset_id: classification.extracted_asset_id || "N/A"
     };

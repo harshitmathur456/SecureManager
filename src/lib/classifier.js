@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 // Keyword lists for fail-safe pre-filtering
 const SECURITY_KEYWORDS = [
@@ -32,6 +32,25 @@ const FACILITY_KEYWORDS = [
   'expansion', 'more lockers', 'site survey'
 ];
 
+// Common Hindi-in-Latin-script tokens that indicate code-mixed (Hinglish) input
+const HINGLISH_TOKENS = [
+  'hai', 'nahi', 'kar', 'ho gaya', 'kardo', 'karo', 'pls', 'bhai',
+  'yaar', 'abhi', 'band', 'khul', 'nahi ho', 'hua', 'gaya', 'wala',
+  'seedha', 'jaldi', 'lagao', 'latch', 'button daba'
+];
+
+/**
+ * Returns a confidence penalty [0, 0.3] proportional to the number of
+ * Hinglish tokens found — the more code-mixed the text, the less certain
+ * a keyword-only classifier can be.
+ */
+function hinglishConfidencePenalty(text) {
+  const hits = HINGLISH_TOKENS.filter(token => text.includes(token)).length;
+  if (hits === 0) return 0;
+  // Each token lowers confidence by 0.06, capped at 0.30 reduction
+  return Math.min(hits * 0.06, 0.30);
+}
+
 /**
  * Runs rule-assisted safety pre-filter
  */
@@ -40,7 +59,6 @@ function runKeywordPreFilter(title, body) {
   
   let securityHit = SECURITY_KEYWORDS.find(kw => text.includes(kw));
   let lockoutUrgentHit = LOCKOUT_URGENT_KEYWORDS.find(kw => text.includes(kw));
-  let lockoutGeneralHit = LOCKOUT_GENERAL_KEYWORDS.find(kw => text.includes(kw));
 
   if (securityHit) {
     return {
@@ -64,7 +82,7 @@ function runKeywordPreFilter(title, body) {
 }
 
 /**
- * Rule-based fallback classifier when Gemini API Key is omitted or offline
+ * Rule-based fallback classifier when Groq API key is omitted or the API call fails
  */
 function fallbackRuleClassifier(title, body, preFilter) {
   const text = `${title} ${body}`.toLowerCase();
@@ -124,12 +142,15 @@ function fallbackRuleClassifier(title, body, preFilter) {
   }
 
   if (LOCKOUT_GENERAL_KEYWORDS.some(kw => text.includes(kw))) {
+    const penalty = hinglishConfidencePenalty(text);
     return {
       category: 'locker_access',
       priority: 'high',
-      confidence: text.includes('hinglish') || text.includes('hai') || text.includes('ho gaya') ? 0.62 : 0.88,
+      confidence: +(0.88 - penalty).toFixed(2),
       suggested_action: "Schedule maintenance technician to inspect door latch mechanism.",
-      reasoning: "User reporting door lock obstruction or mechanism issue.",
+      reasoning: penalty > 0
+        ? `User reporting door lock obstruction. Confidence reduced by ${(penalty * 100).toFixed(0)}% due to code-mixed (Hinglish) input — rule classifier has lower certainty on mixed-language text.`
+        : "User reporting door lock obstruction or mechanism issue.",
       requires_human_review: true,
       extracted_location: extractLocation(text),
       extracted_asset_id: extractAssetId(text)
@@ -159,24 +180,19 @@ function extractAssetId(text) {
 }
 
 /**
- * Main classification function using Gemini LLM + Pre-Filter Safety Net
+ * Main classification function using Groq LLM + Pre-Filter Safety Net
  */
 export async function classifyEmail({ title, body, email_id, confidenceThreshold = 0.70 }) {
   const preFilter = runKeywordPreFilter(title, body);
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
 
   let classificationResult;
 
   if (apiKey) {
     try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
-        generationConfig: { responseMimeType: "application/json" }
-      });
+      const groq = new Groq({ apiKey });
 
-      const prompt = `
-You are Secure Manager's Ops Core Automated Classifier. Secure Manager operates safe-deposit lockers inside residential societies.
+      const prompt = `You are Secure Manager's Ops Core Automated Classifier. Secure Manager operates safe-deposit lockers inside residential societies.
 Classify the following customer support email into ONE category and priority tier according to these exact guidelines:
 
 CATEGORIES:
@@ -200,11 +216,26 @@ Output MUST strictly be a single valid JSON object matching this schema:
   "reasoning": "Brief concise sentence explaining why this classification was selected",
   "extracted_location": "Extracted location/block/flat from email or 'Main Locker Bank'",
   "extracted_asset_id": "Extracted Locker ID, Invoice ID, or 'N/A'"
-}
-`;
+}`;
 
-      const response = await model.generateContent(prompt);
-      const jsonText = response.response.text();
+      const chatCompletion = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a JSON-only classification engine. You must respond with only a single valid JSON object and no other text.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.1,
+        max_tokens: 512
+      });
+
+      const jsonText = chatCompletion.choices[0]?.message?.content || '{}';
       const parsed = JSON.parse(jsonText);
 
       classificationResult = {
@@ -212,13 +243,13 @@ Output MUST strictly be a single valid JSON object matching this schema:
         priority: parsed.priority || 'low',
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.85,
         suggested_action: parsed.suggested_action || 'Review and triage ticket.',
-        reasoning: parsed.reasoning || 'LLM classification completed.',
+        reasoning: parsed.reasoning || 'Groq LLM classification completed.',
         requires_human_review: false,
         extracted_location: parsed.extracted_location || 'Main Society Locker Bank',
         extracted_asset_id: parsed.extracted_asset_id || 'N/A'
       };
     } catch (err) {
-      console.warn("Gemini LLM call failed or key invalid, using fallback classifier:", err.message);
+      console.warn("Groq LLM call failed or key invalid, using fallback classifier:", err.message);
       classificationResult = fallbackRuleClassifier(title, body, preFilter);
     }
   } else {
