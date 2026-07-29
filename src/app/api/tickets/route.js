@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getTickets } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(req) {
   try {
@@ -15,7 +16,14 @@ export async function GET(req) {
     };
 
     const tickets = getTickets(filters);
-    return NextResponse.json({ tickets, count: tickets.length });
+    return NextResponse.json(
+      { tickets, count: tickets.length },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+        }
+      }
+    );
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

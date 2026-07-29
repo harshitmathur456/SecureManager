@@ -23,10 +23,11 @@ export default function Home() {
   // Fetch tickets, stats, telemetry
   const fetchData = async () => {
     try {
+      const ts = Date.now();
       const [ticketsRes, statsRes, settingsRes] = await Promise.all([
-        fetch('/api/tickets'),
-        fetch('/api/stats'),
-        fetch('/api/settings')
+        fetch(`/api/tickets?t=${ts}`, { cache: 'no-store' }),
+        fetch(`/api/stats?t=${ts}`, { cache: 'no-store' }),
+        fetch(`/api/settings?t=${ts}`, { cache: 'no-store' })
       ]);
 
       const ticketsData = await ticketsRes.json();
