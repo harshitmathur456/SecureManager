@@ -1,19 +1,48 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Send, Sparkles, CheckCircle2, AlertTriangle, Terminal } from 'lucide-react';
+import { 
+  X, 
+  Minus, 
+  Square, 
+  ChevronDown, 
+  Paperclip, 
+  Link2, 
+  Smile, 
+  Image as ImageIcon, 
+  Lock, 
+  PenLine, 
+  MoreVertical, 
+  Trash2, 
+  Sparkles, 
+  CheckCircle2, 
+  AlertTriangle,
+  Triangle,
+  Wand2
+} from 'lucide-react';
 
 export default function TestTicketModal({ isOpen, onClose, onTicketCreated }) {
   if (!isOpen) return null;
 
+  const [toEmail, setToEmail] = useState('support@securemanager.io');
+  const [showCc, setShowCc] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
+  const [ccEmail, setCcEmail] = useState('');
+  const [bccEmail, setBccEmail] = useState('');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [emailId, setEmailId] = useState(`em_${Math.floor(100000 + Math.random() * 900000)}`);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const handleQuickPreset = (preset) => {
+    const newId = `em_${Math.floor(100000 + Math.random() * 900000)}`;
+    setEmailId(newId);
+    setResult(null);
+    setError('');
+
     switch (preset) {
       case 'security':
         setTitle('URGENT: Someone damaged lock bezel on Locker #104');
@@ -34,8 +63,22 @@ export default function TestTicketModal({ isOpen, onClose, onTicketCreated }) {
     }
   };
 
+  const handleClear = () => {
+    setTitle('');
+    setBody('');
+    setCcEmail('');
+    setBccEmail('');
+    setResult(null);
+    setError('');
+  };
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (!title.trim() || !body.trim()) {
+      setError('Please fill in both the subject and email body.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setResult(null);
@@ -60,134 +103,266 @@ export default function TestTicketModal({ isOpen, onClose, onTicketCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#161c2a] border border-[rgba(255,255,255,0.1)] rounded-lg w-full max-w-xl overflow-hidden shadow-2xl space-y-0">
-        {/* Header */}
-        <div className="px-5 py-4 bg-[#0a0e18] border-b border-[rgba(255,255,255,0.08)] flex items-center justify-between">
-          <div className="flex items-center gap-2 font-mono text-xs font-bold text-white">
-            <Sparkles className="w-4 h-4 text-blue-400" />
-            <span>TEST BACKEND API (`POST /api/classify`)</span>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl border border-gray-200 flex flex-col transition-all">
+        {/* Gmail Style Header */}
+        <div className="px-4 py-2.5 bg-[#f2f6fc] border-b border-gray-200/80 flex items-center justify-between select-none">
+          <div className="text-sm font-medium text-[#051e42] flex items-center gap-2">
+            <span>New Message</span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 text-gray-500">
+            <button 
+              type="button" 
+              onClick={() => setIsMinimized(!isMinimized)} 
+              className="p-1 hover:bg-gray-200/70 rounded text-gray-600 transition-colors"
+              title="Minimize"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <button 
+              type="button" 
+              className="p-1 hover:bg-gray-200/70 rounded text-gray-600 transition-colors"
+              title="Expand"
+            >
+              <Square className="w-3 h-3" />
+            </button>
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="p-1 hover:bg-gray-200/70 rounded text-gray-600 transition-colors"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-          {/* Presets Bar */}
-          <div>
-            <div className="label-caps text-gray-400 mb-2">QUICK TEST PRESETS</div>
-            <div className="flex items-center gap-2 flex-wrap text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('security')}
-                className="px-2.5 py-1 bg-red-950/40 border border-red-500/40 text-red-300 rounded font-mono hover:bg-red-900/50"
-              >
-                Security Tamper
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('lockout')}
-                className="px-2.5 py-1 bg-amber-950/40 border border-amber-500/40 text-amber-300 rounded font-mono hover:bg-amber-900/50"
-              >
-                Passcode Lockout
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('billing')}
-                className="px-2.5 py-1 bg-blue-950/40 border border-blue-500/40 text-blue-300 rounded font-mono hover:bg-blue-900/50"
-              >
-                Double Charge
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickPreset('hinglish')}
-                className="px-2.5 py-1 bg-purple-950/40 border border-purple-500/40 text-purple-300 rounded font-mono hover:bg-purple-900/50"
-              >
-                Hinglish Jam
-              </button>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-3 font-sans text-xs">
-            <div>
-              <label className="text-[10px] font-mono text-gray-400 block mb-1">EMAIL ID</label>
-              <input
-                type="text"
-                value={emailId}
-                onChange={(e) => setEmailId(e.target.value)}
-                required
-                className="w-full bg-[#0a0e18] text-white p-2 rounded border border-[rgba(255,255,255,0.1)] font-mono"
-              />
+        {!isMinimized && (
+          <div className="flex flex-col flex-1">
+            {/* Quick Test Presets Bar */}
+            <div className="px-4 py-2 bg-slate-50 border-b border-gray-100 flex items-center justify-between gap-2 flex-wrap text-xs">
+              <div className="flex items-center gap-1.5 text-slate-500 font-medium text-[11px]">
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>Presets:</span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset('security')}
+                  className="px-2.5 py-0.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-full font-medium text-[11px] transition-colors"
+                >
+                  Security Tamper
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset('lockout')}
+                  className="px-2.5 py-0.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-700 rounded-full font-medium text-[11px] transition-colors"
+                >
+                  Passcode Lockout
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset('billing')}
+                  className="px-2.5 py-0.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-full font-medium text-[11px] transition-colors"
+                >
+                  Double Charge
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickPreset('hinglish')}
+                  className="px-2.5 py-0.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-full font-medium text-[11px] transition-colors"
+                >
+                  Hinglish Jam
+                </button>
+              </div>
             </div>
 
-            <div>
-              <label className="text-[10px] font-mono text-gray-400 block mb-1">EMAIL SUBJECT / TITLE</label>
+            {/* To Line */}
+            <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-gray-500 font-normal text-sm w-8 shrink-0">To</span>
+                <input
+                  type="text"
+                  value={toEmail}
+                  onChange={(e) => setToEmail(e.target.value)}
+                  className="w-full outline-none text-gray-800 bg-transparent text-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500 font-medium shrink-0">
+                {!showCc && (
+                  <button 
+                    type="button" 
+                    onClick={() => setShowCc(true)}
+                    className="hover:text-gray-800 hover:underline cursor-pointer"
+                  >
+                    Cc
+                  </button>
+                )}
+                {!showBcc && (
+                  <button 
+                    type="button" 
+                    onClick={() => setShowBcc(true)}
+                    className="hover:text-gray-800 hover:underline cursor-pointer"
+                  >
+                    Bcc
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Optional CC line */}
+            {showCc && (
+              <div className="px-4 py-2 border-b border-gray-100 flex items-center text-sm">
+                <span className="text-gray-500 font-normal text-sm w-8 shrink-0">Cc</span>
+                <input
+                  type="text"
+                  placeholder="Recipients"
+                  value={ccEmail}
+                  onChange={(e) => setCcEmail(e.target.value)}
+                  className="w-full outline-none text-gray-800 bg-transparent text-sm"
+                />
+              </div>
+            )}
+
+            {/* Optional BCC line */}
+            {showBcc && (
+              <div className="px-4 py-2 border-b border-gray-100 flex items-center text-sm">
+                <span className="text-gray-500 font-normal text-sm w-8 shrink-0">Bcc</span>
+                <input
+                  type="text"
+                  placeholder="Recipients"
+                  value={bccEmail}
+                  onChange={(e) => setBccEmail(e.target.value)}
+                  className="w-full outline-none text-gray-800 bg-transparent text-sm"
+                />
+              </div>
+            )}
+
+            {/* Subject Line */}
+            <div className="px-4 py-2 border-b border-gray-100 flex items-center text-sm">
               <input
                 type="text"
-                placeholder="e.g. Can't unlock door 204"
+                placeholder="Subject"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                required
-                className="w-full bg-[#0a0e18] text-white p-2 rounded border border-[rgba(255,255,255,0.1)]"
+                className="w-full outline-none text-gray-800 placeholder-gray-400 bg-transparent text-sm font-normal"
               />
             </div>
 
-            <div>
-              <label className="text-[10px] font-mono text-gray-400 block mb-1">EMAIL BODY PAYLOAD</label>
+            {/* Body Textarea */}
+            <div className="p-4 flex-1 min-h-[220px] flex flex-col">
               <textarea
-                rows={4}
-                placeholder="Paste customer query body text here..."
+                rows={8}
+                placeholder=""
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                required
-                className="w-full bg-[#0a0e18] text-white p-2 rounded border border-[rgba(255,255,255,0.1)]"
-              ></textarea>
+                className="w-full flex-1 outline-none text-gray-800 placeholder-gray-400 bg-transparent text-sm resize-none border-none p-0"
+              />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
-            >
-              {loading ? (
-                <span>Executing Hybrid AI Engine...</span>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>Execute POST /api/classify</span>
-                </>
-              )}
-            </button>
-          </form>
+            {/* Error Message */}
+            {error && (
+              <div className="mx-4 mb-3 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          {error && (
-            <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-300 text-xs rounded font-mono">
-              Error: {error}
-            </div>
-          )}
+            {/* Result Toast / Classification Summary */}
+            {result && (
+              <div className="mx-4 mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1.5 text-xs font-sans">
+                <div className="flex items-center justify-between text-emerald-800 font-semibold">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Email Ingested & Classified Successfully!
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-mono text-[11px]">
+                    {Math.round(result.confidence * 100)}% Confidence
+                  </span>
+                </div>
+                <div className="text-emerald-900 text-[11px] flex items-center gap-3">
+                  <span><strong>Ticket ID:</strong> {result.ticket_id}</span>
+                  <span><strong>Category:</strong> {result.category}</span>
+                  <span><strong>Priority:</strong> {result.priority}</span>
+                </div>
+              </div>
+            )}
 
-          {/* Classification API Output Preview */}
-          {result && (
-            <div className="p-4 bg-[#0a0e18] border border-emerald-500/40 rounded space-y-2 font-mono text-xs">
-              <div className="flex items-center justify-between text-emerald-400 font-bold border-b border-[rgba(255,255,255,0.08)] pb-2">
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
-                  API RESPONSE (201 CREATED)
-                </span>
-                <span>{Math.round(result.confidence * 100)}% CONFIDENCE</span>
+            {/* Footer Toolbar */}
+            <div className="px-4 py-3 bg-white border-t border-gray-100 flex items-center justify-between rounded-b-xl">
+              {/* Left Actions: Blue Send Split Button + Tool Icons */}
+              <div className="flex items-center gap-3">
+                {/* Blue Pill Send Button */}
+                <div className="inline-flex rounded-full shadow-sm bg-[#0b57d0] hover:bg-[#094bb7] transition-all">
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="px-5 py-2 text-white font-medium text-sm flex items-center gap-1.5 rounded-l-full hover:bg-black/10 transition-colors"
+                  >
+                    {loading ? (
+                      <span>Sending...</span>
+                    ) : (
+                      <span>Send</span>
+                    )}
+                  </button>
+                  <div className="w-[1px] bg-blue-400/40 my-1.5"></div>
+                  <button
+                    type="button"
+                    className="px-2.5 py-2 text-white rounded-r-full hover:bg-black/10 transition-colors flex items-center justify-center"
+                    title="More send options"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Toolbar Icons matching Image 2 */}
+                <div className="flex items-center gap-0.5 text-gray-600">
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors font-serif font-bold text-xs text-gray-700" title="Formatting options">
+                    Aa
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="AI Assistant">
+                    <Wand2 className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Attach files">
+                    <Paperclip className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Insert link">
+                    <Link2 className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Insert emoji">
+                    <Smile className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Insert files using Drive">
+                    <Triangle className="w-3.5 h-3.5 text-gray-600 fill-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Insert photo">
+                    <ImageIcon className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Toggle confidential mode">
+                    <Lock className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Insert signature">
+                    <PenLine className="w-4 h-4 text-gray-600" />
+                  </button>
+                  <button type="button" className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="More options">
+                    <MoreVertical className="w-4 h-4 text-gray-600" />
+                  </button>
+                </div>
               </div>
 
-              <pre className="text-[11px] text-gray-300 bg-[#070a10] p-3 rounded overflow-x-auto">
-                {JSON.stringify(result, null, 2)}
-              </pre>
-
-              <div className="text-[10px] text-gray-400 font-sans italic">
-                Ticket automatically persisted to database & surfaced on Triage Queue.
-              </div>
+              {/* Right Action: Trash Icon */}
+              <button
+                type="button"
+                onClick={handleClear}
+                className="p-2 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-full transition-colors"
+                title="Discard draft"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

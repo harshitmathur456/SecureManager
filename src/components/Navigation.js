@@ -36,14 +36,14 @@ export default function Navigation({ activeTab, setActiveTab, onOpenTestModal, p
           </div>
         </div>
 
-        {/* Action Button: Test API Classifier */}
+        {/* Action Button: Ingest Email */}
         <div className="p-3">
           <button
             onClick={onOpenTestModal}
             className="w-full py-2.5 px-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 hover:border-blue-400 text-blue-300 rounded text-xs font-semibold flex items-center justify-center gap-2 transition-all duration-150 shadow-sm"
           >
             <PlusCircle className="w-4 h-4 text-blue-400" />
-            <span>Test API Classify</span>
+            <span>Ingest Email</span>
           </button>
         </div>
 

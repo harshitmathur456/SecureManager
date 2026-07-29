@@ -109,7 +109,7 @@ export default function TriageQueue({
             className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/20"
           >
             <Plus className="w-4 h-4" />
-            <span>Ingest Email API</span>
+            <span>Ingest Email</span>
           </button>
         </div>
       </header>
