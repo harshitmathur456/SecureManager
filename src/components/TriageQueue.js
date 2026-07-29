@@ -31,6 +31,7 @@ export default function TriageQueue({
 
   // Filter tickets
   const filteredTickets = tickets.filter(t => {
+    if (t.status === 'resolved') return false;
     if (filterNeedsReview && !t.requires_human_review) return false;
     if (priorityFilter !== 'all' && t.priority.toLowerCase() !== priorityFilter) return false;
     if (categoryFilter !== 'all' && t.category.toLowerCase() !== categoryFilter) return false;

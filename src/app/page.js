@@ -92,7 +92,7 @@ export default function Home() {
     );
   }
 
-  const pendingHumanReviewCount = tickets.filter(t => t.requires_human_review).length;
+  const pendingHumanReviewCount = tickets.filter(t => t.status !== 'resolved' && t.requires_human_review).length;
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#0f131d]">
