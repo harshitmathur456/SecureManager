@@ -88,15 +88,16 @@ function fallbackRuleClassifier(title, body, preFilter) {
   const text = `${title} ${body}`.toLowerCase();
 
   if (preFilter.safety_net_triggered) {
+    const isSecurity = preFilter.forced_category === 'security_concern';
     return {
       category: preFilter.forced_category,
       priority: preFilter.forced_priority,
       confidence: 0.95,
-      suggested_action: preFilter.forced_category === 'security_concern'
+      suggested_action: isSecurity
         ? "Dispatch security lead & field engineer immediately. Freeze locker access."
         : "Trigger remote master override after verifying resident identity.",
       reasoning: preFilter.reason,
-      requires_human_review: true,
+      requires_human_review: isSecurity,
       extracted_location: extractLocation(text),
       extracted_asset_id: extractAssetId(text)
     };
@@ -143,15 +144,16 @@ function fallbackRuleClassifier(title, body, preFilter) {
 
   if (LOCKOUT_GENERAL_KEYWORDS.some(kw => text.includes(kw))) {
     const penalty = hinglishConfidencePenalty(text);
+    const confidence = +(0.88 - penalty).toFixed(2);
     return {
       category: 'locker_access',
       priority: 'high',
-      confidence: +(0.88 - penalty).toFixed(2),
+      confidence,
       suggested_action: "Schedule maintenance technician to inspect door latch mechanism.",
       reasoning: penalty > 0
         ? `User reporting door lock obstruction. Confidence reduced by ${(penalty * 100).toFixed(0)}% due to code-mixed (Hinglish) input — rule classifier has lower certainty on mixed-language text.`
         : "User reporting door lock obstruction or mechanism issue.",
-      requires_human_review: true,
+      requires_human_review: confidence < 0.70,
       extracted_location: extractLocation(text),
       extracted_asset_id: extractAssetId(text)
     };
@@ -258,7 +260,7 @@ Output MUST strictly be a single valid JSON object matching this schema:
 
   // APPLY CRITICAL SYSTEM GUARDRAILS (PRD Section 6 & 9b):
   
-  // Guardrail 1: If Safety Net pre-filter triggered security/urgent terms, override/escalate!
+  // Guardrail 1: Keyword safety net escalates PRIORITY (and category for security keywords)
   if (preFilter.safety_net_triggered) {
     if (preFilter.forced_category === 'security_concern') {
       classificationResult.category = 'security_concern';
@@ -269,13 +271,13 @@ Output MUST strictly be a single valid JSON object matching this schema:
     classificationResult.reasoning = `${preFilter.reason} | LLM Note: ${classificationResult.reasoning}`;
   }
 
-  // Guardrail 2: Security concern ALWAYS requires human review!
+  // Guardrail 2: Security concern ALWAYS requires human review and urgent priority
   if (classificationResult.category === 'security_concern') {
     classificationResult.requires_human_review = true;
     classificationResult.priority = 'urgent';
   }
 
-  // Guardrail 3: Low confidence below system threshold ALWAYS requires human review!
+  // Guardrail 3: Low confidence below system threshold ALWAYS requires human review
   if (classificationResult.confidence < confidenceThreshold) {
     classificationResult.requires_human_review = true;
   }

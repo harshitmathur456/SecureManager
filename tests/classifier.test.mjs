@@ -94,13 +94,15 @@ describe('Guardrail C — keyword safety net fires on body content', () => {
       'Reasoning should mention the Keyword Safety Net trigger');
   });
 
-  test('"unauthorized" keyword in body triggers safety net', async () => {
+  test('lockout urgent keywords escalate priority to urgent but do NOT force requires_human_review if confidence >= 0.70', async () => {
     const result = await classify(
-      'Locker check',
-      'I think there was unauthorized access to the storage area on 3rd floor.'
+      'Locked out! Flight in 2 hours',
+      'App code not generating, I\'m stranded at the locker.'
     );
-    assert.equal(result.category, 'security_concern');
-    assert.equal(result.requires_human_review, true);
+    assert.equal(result.category, 'locker_access');
+    assert.equal(result.priority, 'urgent');
+    assert.equal(result.requires_human_review, false,
+      'Lockout urgent keywords should escalate priority to urgent, but NOT force human review if confidence >= threshold');
   });
 });
 
