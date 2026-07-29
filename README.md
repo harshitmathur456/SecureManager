@@ -123,8 +123,4 @@ Content-Type: application/json
 4. **Concurrent Write Safety**:
    - The current file-based JSON store has no write-locking and is not safe under concurrent requests (e.g. simultaneous POST calls may cause partial writes or data loss). A proper database (SQLite with WAL mode, PostgreSQL, etc.) with atomic transactions is required before production use.
 
----
 
-## 📄 License
-
-[MIT](./LICENSE)
